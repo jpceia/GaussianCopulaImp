@@ -129,6 +129,37 @@ class OnlineExpectationMaximization(ExpectationMaximization):
         self.iteration = 1
 
 
+    def fit_and_predict(self, X, batch_size=50, max_workers=1, num_ord_updates=2, decay_coef=0.5, sigma_update=True, marginal_update=True):
+        """
+        Updates the fit of the copula using the data in X and returns the 
+        imputed values and the new correlation for the copula
+
+        Args:
+            X (matrix): data matrix with entries to use to update copula and be imputed
+            batch_size (positive int): the size of each batch
+            max_workers (positive int): the maximum number of workers for parallelism 
+            num_ord_updates (positive int): the number of times to re-estimate the latent ordinals per batch
+            decay_coef (float in (0,1)): tunes how much to weight new covariance estimates
+        Returns:
+            X_imp (matrix): X with missing values imputed
+        """
+        j = 0
+        X_imp = np.zeros(X.shape)
+        num_batch = len(X) // batch_size
+        while j < num_batch:
+            start = j * batch_size
+            end = (j+1) * batch_size
+            X_batch = np.copy(X[start:end, :])
+            X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+            j += 1
+        if j * batch_size < len(X):
+            start = j * batch_size
+            end = len(X)
+            X_batch = np.copy(X[start:end, :])
+            X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+        return X_imp
+
+
     def partial_fit_and_predict(self, X_batch, max_workers=1, num_ord_updates=2, decay_coef=0.5, sigma_update=True, marginal_update = True, sigma_out=False):
         """
         Updates the fit of the copula using the data in X_batch and returns the 
