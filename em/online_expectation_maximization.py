@@ -129,7 +129,7 @@ class OnlineExpectationMaximization(ExpectationMaximization):
         self.iteration = 1
 
 
-    def fit_and_predict(self, X, batch_size=50, max_workers=1, num_ord_updates=2, decay_coef=0.5, sigma_update=True, marginal_update=True):
+    def fit_and_predict(self, X, batch_size=50, max_workers=1, num_ord_updates=2, decay_coef=0.5, sigma_update=True, marginal_update=True, sigma_out=False):
         """
         Updates the fit of the copula using the data in X and returns the 
         imputed values and the new correlation for the copula
@@ -150,14 +150,23 @@ class OnlineExpectationMaximization(ExpectationMaximization):
             start = j * batch_size
             end = (j+1) * batch_size
             X_batch = np.copy(X[start:end, :])
-            X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+            if sigma_out:
+                X_imp[start:end, :], sigma = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+            else:
+                X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
             j += 1
         if j * batch_size < len(X):
             start = j * batch_size
             end = len(X)
             X_batch = np.copy(X[start:end, :])
-            X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
-        return X_imp
+            if sigma_out:
+                X_imp[start:end, :], sigma = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+            else:
+                X_imp[start:end, :] = partial_fit_and_predict(X_batch, max_workers, num_ord_updates, decay_coef, sigma_update, marginal_update)
+        if sigma_out:
+            return X_imp, sigma
+        else:
+            return X_imp
 
 
     def partial_fit_and_predict(self, X_batch, max_workers=1, num_ord_updates=2, decay_coef=0.5, sigma_update=True, marginal_update = True, sigma_out=False):
